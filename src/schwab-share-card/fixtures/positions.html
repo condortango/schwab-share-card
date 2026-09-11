@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Synthetic Schwab positions fixture</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 24px; color: #111; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p { margin: 0 0 16px; color: #555; max-width: 60em; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { padding: 6px 10px; border-bottom: 1px solid #ddd; white-space: nowrap; }
+  thead th { text-align: right; font-weight: 600; background: #f5f5f5; }
+  thead th:first-child, tbody th { text-align: left; }
+  .sdps-text-right { text-align: right; }
+  .sdps-text-gain { color: #0a7d3e; }
+  .sdps-text-loss { color: #b3261e; }
+  .child-position-row th.symbolColumn { padding-left: 28px; }
+  button { font: inherit; background: none; border: 0; padding: 0; color: inherit; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>Synthetic offline positions fixture</h1>
+<p>Invented tickers and invented amounts in the same DOM shape as a live Schwab
+Positions table. Nothing here is a real holding. Open this file straight from
+disk over file:// and click a row to exercise the bookmarklet offline.</p>
+<table>
+  <thead>
+    <tr>
+      <th scope="col">Symbol</th>
+      <th scope="col">Gain/Loss %</th>
+      <th scope="col">Cost Basis</th>
+      <th scope="col">Quantity</th>
+      <th scope="col">Price</th>
+      <th scope="col">Day Chng $</th>
+      <th scope="col">Day Chng %</th>
+      <th scope="col">Mkt Val</th>
+      <th scope="col">Day Gain/Loss $</th>
+      <th scope="col">Day Gain/Loss %</th>
+      <th scope="col">Gain/Loss $</th>
+      <th scope="col">Gain/Loss %</th>
+      <th scope="col">Reinvest</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr app-position-row="" class="holdings-no-wrap position-row parent-position-row holdings-hover-row sdps-text-s-body holdings-border-right" id="0-0-0" data-symbol="ZORK" data-streamable="true" data-isoption="false" data-iscrypto="false" data-row-visible="true">
+      <th class="symbolColumn" scope="row"><a href="/SymbolRouting.aspx?symbol=ZORK"> ZORK </a></th>
+      <td class="sdps-text-right tooltip-column sdps-text-gain" title="+$24,800.00"> +12.40% </td>
+      <td app-cost-basis-column="" class="sdps-text-right"><button type="button" title="$80.00/share" aria-label="$200,000.00"> $200,000.00 </button></td>
+      <td class="sdps-text-right"> 2,500 </td>
+      <td class="sdps-text-right"><span title="As of today's date"> $89.92 </span></td>
+      <td class="sdps-text-right sdps-text-gain"><span class="print-color-cell" title="+1.24%"> +$1.10 </span></td>
+      <td class="sdps-text-right sdps-text-gain"><span class="print-color-cell" title="+$1.10"> +1.24% </span></td>
+      <td class="sdps-text-right"> $224,800.00 </td>
+      <td class="sdps-text-right tooltip-column sdps-text-gain" title="+1.24%"> +$2,750.00 </td>
+      <td class="sdps-text-right tooltip-column sdps-text-gain" title="+$2,750.00"> +1.24% </td>
+      <td class="sdps-text-right tooltip-column sdps-text-gain" title="+12.40%"> +$24,800.00 </td>
+      <td class="sdps-text-right tooltip-column sdps-text-gain" title="+$2,750.00"> +1.24% </td>
+      <td app-reinvest-column=""><button type="button"> No </button></td>
+    </tr>
+    <tr app-position-row="" class="holdings-no-wrap position-row child-position-row holdings-hover-row sdps-text-s-body holdings-border-right" id="0-0-1-0-0" data-symbol="ACME   270115C00050000" data-streamable="true" data-security-group-index="0" data-isoption="true" data-iscrypto="false" data-position-row-index="1" data-child-type="chld-dupe-strat" data-parent-name="ACME Covered Call" data-row-visible="true">
+      <th class="symbolColumn" scope="row"><a class="strategy" href="/app/trade/chains/#/quotedetail/symbol/ACME/optionsymbol/ACME%20%20%20270115C00050000"> ACME 01/15/2027 50.00 C </a></th>
+      <td class="sdps-text-right tooltip-column sdps-text-loss" title="-$65.00"> -3.25% </td>
+      <td app-cost-basis-column="" class="sdps-text-right"><button type="button" title="$10.00/share" aria-label="-$2,000.00"> -$2,000.00 </button></td>
+      <td class="sdps-text-right"> -2 </td>
+      <td class="sdps-text-right"><span title="As of today's date"> $10.325 </span></td>
+      <td class="sdps-text-right sdps-text-gain"><span class="print-color-cell" title="+2.10%"> +$0.15 </span></td>
+      <td class="sdps-text-right sdps-text-gain"><span class="print-color-cell" title="+$0.15"> +2.10% </span></td>
+      <td class="sdps-text-right"> -$2,065.00 </td>
+      <td class="sdps-text-right tooltip-column sdps-text-loss" title="-2.10%"> -$30.00 </td>
+      <td class="sdps-text-right tooltip-column sdps-text-loss" title="-$30.00"> -2.10% </td>
+      <td class="sdps-text-right tooltip-column sdps-text-loss" title="-3.25%"> -$65.00 </td>
+      <td app-reinvest-column=""> N/A </td>
+    </tr>
+    <tr app-position-row="" class="holdings-no-wrap position-row child-position-row holdings-hover-row sdps-text-s-body holdings-border-right" id="0-0-1-0-1" data-symbol="ACME   281215C00240000" data-streamable="true" data-security-group-index="0" data-isoption="true" data-iscrypto="false" data-position-row-index="1" data-child-type="chld-dupe-strat" data-parent-name="ACME Covered Call" data-row-visible="true">
+      <th class="symbolColumn" scope="row"><a class="strategy" href="/app/trade/chains/#/quotedetail/symbol/ACME/optionsymbol/ACME%20%20%20281215C00240000"> ACME 12/15/2028 240.00 C </a></th>
+      <td class="sdps-text-right tooltip-column sdps-text-gain" title="+$8,340.00"> +41.70% </td>
+      <td app-cost-basis-column="" class="sdps-text-right"><button type="button" title="$66.67/share" aria-label="$20,000.00"> $20,000.00 </button></td>
+      <td class="sdps-text-right"> 3 </td>
+      <td class="sdps-text-right"><span title="As of today's date"> $94.47 </span></td>
+      <td class="sdps-text-right sdps-text-gain"><span class="print-color-cell" title="+0.14%"> +$0.40 </span></td>
+      <td class="sdps-text-right sdps-text-gain"><span class="print-color-cell" title="+$0.40"> +0.14% </span></td>
+      <td class="sdps-text-right"> $28,340.00 </td>
+      <td class="sdps-text-right tooltip-column sdps-text-gain" title="+0.14%"> +$120.00 </td>
+      <td class="sdps-text-right tooltip-column sdps-text-gain" title="+$120.00"> +0.14% </td>
+      <td class="sdps-text-right tooltip-column sdps-text-gain" title="+41.70%"> +$8,340.00 </td>
+      <td app-reinvest-column=""> N/A </td>
+    </tr>
+  </tbody>
+</table>
+<!-- The option rows carry one cell fewer than the header and the equity row:
+     live Schwab omits the repeated day gain/loss percent cell on child rows. -->
+</body>
+</html>
