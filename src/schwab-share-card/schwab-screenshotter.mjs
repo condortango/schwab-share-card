@@ -443,12 +443,11 @@ export const CARD_THEME = {
   footer: '#8FA3C8',
 };
 
-// The small label above the number, and the footer's project mark: two plain
-// letters, never a logo that could pass for a broker's.
+// The small labels that name what each number is. The card carries no mark of
+// its own: the footer is the share time, and the corner opposite it is empty.
 const CARD_LABEL_TEXT = 'Performance';
 const CARD_DAY_LABEL_TEXT = 'Day change';
 const CARD_QUANTITY_LABEL_TEXT = 'Quantity';
-const CARD_MARK_TEXT = 'ss';
 
 // The two words an option card can put under its instrument. They name the
 // trade that opened the position, not a strategy: a written call and a
@@ -667,7 +666,6 @@ export function buildCard(snapshot, mode, now, measure, options) {
     ops.push(textOp(line, left, y, fitFont(measure, line, cardFont('500', CARD_EXTRA_PX, theme), maxWidth, FIT_EXTRA_MIN_PX), theme.secondary, 'left', 'alphabetic'));
   }
   ops.push(textOp(stamp === null ? '' : stamp, left, CARD_FOOTER_Y, cardFont('400', CARD_FOOTER_PX, theme), theme.footer, 'left', 'alphabetic'));
-  ops.push(textOp(CARD_MARK_TEXT, CARD_W - theme.margin, CARD_FOOTER_Y, cardFont('700', CARD_FOOTER_PX, theme), theme.footer, 'right', 'alphabetic'));
   return { width: CARD_W, height: CARD_H, ops: ops };
 }
 

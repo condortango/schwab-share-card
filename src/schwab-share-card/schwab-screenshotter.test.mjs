@@ -770,7 +770,7 @@ test('card-list', () => {
   assert.equal(pct.ops[0].to, CARD_THEME.washTo);
 
   const pctTexts = cardTexts(pct);
-  assert.equal(pctTexts.length, 5, 'instrument, label, number, timestamp, mark');
+  assert.equal(pctTexts.length, 4, 'instrument, label, number, timestamp');
   assert.deepEqual(pctTexts.slice(0, 3), ['INTC', 'Performance', '+12.40%']);
   assert.ok(
     !pctTexts.some((text) => text.includes('$')),
@@ -779,7 +779,7 @@ test('card-list', () => {
 
   const usd = buildCard(cardSnapshot(), 'usd', CARD_NOW);
   const usdTexts = cardTexts(usd);
-  assert.equal(usdTexts.length, 5);
+  assert.equal(usdTexts.length, 4);
   assert.equal(usdTexts[2], '+$24,800.00');
   assert.ok(
     !usdTexts.some((text) => text.includes('%')),
@@ -788,7 +788,7 @@ test('card-list', () => {
 
   const both = buildCard(cardSnapshot(), 'both', CARD_NOW);
   const bothTexts = cardTexts(both);
-  assert.equal(bothTexts.length, 6, 'both adds the dollar line under the percent');
+  assert.equal(bothTexts.length, 5, 'both adds the dollar line under the percent');
   assert.equal(bothTexts[2], '+12.40%', 'the percent stays the primary');
   assert.equal(bothTexts[3], '+$24,800.00');
   const bothOps = cardTextOps(both);
@@ -807,16 +807,17 @@ test('card-list', () => {
   const flat = buildCard(cardSnapshot({ totalPct: 0, totalDollars: 0 }), 'both', CARD_NOW);
   assert.equal(cardTextOps(flat)[2].fill, CARD_THEME.flat, 'exactly zero is flat, not a gain');
 
-  // the footer: the pinned share time on the left, the project mark right
+  // the footer: the pinned share time on the left, and the corner opposite it
+  // left empty, because the card signs itself with nothing at all
   const footer = cardTextOps(pct)[3];
-  const mark = cardTextOps(pct)[4];
   assert.equal(footer.text, 'Share Time: 09/11/2026 07:05');
   assert.equal(footer.x, CARD_THEME.margin);
   assert.equal(footer.align, 'left');
-  assert.equal(mark.text, 'ss');
-  assert.equal(mark.align, 'right');
-  assert.equal(mark.x, CARD_W - CARD_THEME.margin);
-  assert.equal(mark.y, footer.y, 'both footer lines share a baseline');
+  assert.equal(cardTextOps(pct).length, 4, 'the share time is the last thing drawn');
+  assert.ok(
+    !cardTextOps(pct).some((op) => op.align === 'right'),
+    'and nothing is drawn against the right margin',
+  );
 
   // fitting: a line that fits keeps its size, a long one shrinks to the
   // content width, and nothing ever drops below the readable floor
@@ -1001,9 +1002,9 @@ function textRuns(calls) {
 test('buildCard modes answer to the default toggles', () => {
   const snapshot = cardSnapshot({ dayPct: 1.24, dayDollars: 2750 });
   const expected = {
-    pct: ['INTC', 'Performance', '+12.40%', 'Share Time: 09/11/2026 07:05', 'ss'],
-    usd: ['INTC', 'Performance', '+$24,800.00', 'Share Time: 09/11/2026 07:05', 'ss'],
-    both: ['INTC', 'Performance', '+12.40%', '+$24,800.00', 'Share Time: 09/11/2026 07:05', 'ss'],
+    pct: ['INTC', 'Performance', '+12.40%', 'Share Time: 09/11/2026 07:05'],
+    usd: ['INTC', 'Performance', '+$24,800.00', 'Share Time: 09/11/2026 07:05'],
+    both: ['INTC', 'Performance', '+12.40%', '+$24,800.00', 'Share Time: 09/11/2026 07:05'],
   };
   for (const mode of ['pct', 'usd', 'both']) {
     const card = buildCard(snapshot, mode, CARD_NOW, stubMeasure);
@@ -1040,7 +1041,7 @@ test('card-toggles', () => {
   const quantity = build('pct', { showQuantity: true });
   assert.deepEqual(
     cardTexts(quantity),
-    ['INTC', 'Performance', '+12.40%', 'Quantity 1,337', 'Share Time: 09/11/2026 07:05', 'ss'],
+    ['INTC', 'Performance', '+12.40%', 'Quantity 1,337', 'Share Time: 09/11/2026 07:05'],
   );
   assert.equal(
     cardTexts(buildCard(cardSnapshot({ quantity: -1 }), 'pct', CARD_NOW, stubMeasure, { showQuantity: true }))[3],
@@ -1071,7 +1072,7 @@ test('card-toggles', () => {
 
   // with the overall change off the day change is promoted into the headline
   const promoted = build('pct', { showDayChange: true, showOverallChange: false });
-  assert.deepEqual(cardTexts(promoted), ['INTC', 'Day change', '+1.24%', 'Share Time: 09/11/2026 07:05', 'ss']);
+  assert.deepEqual(cardTexts(promoted), ['INTC', 'Day change', '+1.24%', 'Share Time: 09/11/2026 07:05']);
   assert.equal(cardTextOps(promoted)[2].y, cardTextOps(build('pct', null))[2].y, 'at the headline baseline');
   assert.ok(
     fontPx(cardTextOps(promoted)[2].font) > fontPx(cardTextOps(all)[3].font),
@@ -1080,7 +1081,7 @@ test('card-toggles', () => {
 
   // a quantity-only card is a card; a card with nothing on it is not
   const bare = build('pct', { showQuantity: true, showOverallChange: false });
-  assert.deepEqual(cardTexts(bare), ['INTC', 'Quantity 1,337', 'Share Time: 09/11/2026 07:05', 'ss']);
+  assert.deepEqual(cardTexts(bare), ['INTC', 'Quantity 1,337', 'Share Time: 09/11/2026 07:05']);
   assert.equal(cardTextOps(bare)[1].y, cardTextOps(build('pct', null))[2].y, 'the stack starts at the headline');
   assert.equal(build('pct', { showOverallChange: false }), null, 'every line off is no card');
   assert.equal(build('usd', { showOverallChange: false }), null);
@@ -1094,7 +1095,7 @@ test('card-toggles', () => {
   const dayless = cardSnapshot();
   assert.deepEqual(
     cardTexts(buildCard(dayless, 'pct', CARD_NOW, stubMeasure, { showDayChange: true })),
-    ['INTC', 'Performance', '+12.40%', 'Share Time: 09/11/2026 07:05', 'ss'],
+    ['INTC', 'Performance', '+12.40%', 'Share Time: 09/11/2026 07:05'],
   );
   assert.equal(
     buildCard(dayless, 'pct', CARD_NOW, stubMeasure, { showDayChange: true, showOverallChange: false }),
@@ -1168,7 +1169,7 @@ test('buildCard leaves shares and unread options without an opening side', () =>
   const shorted = cardSnapshot({ quantity: -1900 });
   assert.deepEqual(
     cardTexts(buildCard(shorted, 'both', CARD_NOW, stubMeasure)),
-    ['INTC', 'Performance', '+12.40%', '+$24,800.00', 'Share Time: 09/11/2026 07:05', 'ss'],
+    ['INTC', 'Performance', '+12.40%', '+$24,800.00', 'Share Time: 09/11/2026 07:05'],
     'a short share position is a share position, and the card says nothing about how it was opened',
   );
 
@@ -1183,7 +1184,7 @@ test('buildCard leaves shares and unread options without an opening side', () =>
   assert.ok(ops[2].y > ops[1].y + fontPx(ops[1].font), 'far enough down that the two lines cannot touch');
 });
 
-const PCT_TEXTS = ['INTC', 'Performance', '+12.40%', 'Share Time: 09/11/2026 07:05', 'ss'];
+const PCT_TEXTS = ['INTC', 'Performance', '+12.40%', 'Share Time: 09/11/2026 07:05'];
 
 test('paint', async () => {
   const both = buildCard(cardSnapshot(), 'both', CARD_NOW, stubMeasure);
@@ -1227,10 +1228,9 @@ test('paint', async () => {
     '+12.40%',
     '+$24,800.00',
     'Share Time: 09/11/2026 07:05',
-    'ss',
   ]);
   assert.equal(runs[2].fillStyle, CARD_THEME.gain, 'the tone reaches the canvas');
-  assert.equal(runs[5].textAlign, 'right', 'and so does the mark alignment');
+  assert.ok(runs.every((run) => run.textAlign === 'left'), 'and so does the alignment of every run');
 
   const pctCtx = fakeCtx();
   paintCard(pctCtx, buildCard(cardSnapshot(), 'pct', CARD_NOW, stubMeasure));
@@ -1242,7 +1242,6 @@ test('paint', async () => {
     'Performance',
     '+$24,800.00',
     'Share Time: 09/11/2026 07:05',
-    'ss',
   ]);
 
   const bare = fakeCtx();
@@ -2386,7 +2385,7 @@ test('chooser-toggles', () => {
     const snapshot = cardSnapshot({ dayPct: 1.24, dayDollars: 2750 });
     assert.deepEqual(
       cardTexts(buildCard(snapshot, picked[0][0], CARD_NOW, stubMeasure, picked[0][1])),
-      ['INTC', 'Performance', '+12.40%', 'Day change +1.24%', 'Share Time: 09/11/2026 07:05', 'ss'],
+      ['INTC', 'Performance', '+12.40%', 'Day change +1.24%', 'Share Time: 09/11/2026 07:05'],
     );
   }
 });
@@ -2456,7 +2455,7 @@ test('chooser preview', () => {
       'and it is the percent card, because % only is the mode the sheet focuses',
     );
     assert.match(texts[3], /^Share Time: /, 'stamped from the clock, like the card the copy draws');
-    assert.deepEqual(texts.slice(4), ['ss'], 'and carrying nothing the copied card would not');
+    assert.equal(texts.length, 4, 'and carrying nothing the copied card would not');
     close();
   }
 
@@ -2656,9 +2655,8 @@ test('end-to-end', async () => {
       const head = card.side ? [card.instrument, card.side] : [card.instrument];
       const expected = head.concat(['Performance'], card.numbers[mode]);
       assert.deepEqual(texts.slice(0, expected.length), expected, label);
-      assert.equal(texts.length, expected.length + 2, label + ': and nothing else is drawn');
-      assert.match(texts[texts.length - 2], SHARE_TIME, label + ': the footer pins when it was shared');
-      assert.equal(texts[texts.length - 1], 'ss', label);
+      assert.equal(texts.length, expected.length + 1, label + ': and nothing else is drawn');
+      assert.match(texts[texts.length - 1], SHARE_TIME, label + ': the footer pins when it was shared');
       assert.equal(d.canvas.width, CARD_W, label);
       assert.equal(d.canvas.height, CARD_H, label);
       assert.deepEqual(d.canvas.types, ['image/png'], label + ': the card is encoded as a PNG');
@@ -2787,7 +2785,6 @@ test('end-to-end', async () => {
       '+12.40%',
       '+$24,800.00',
       'Share Time: 09/11/2026 07:05',
-      'ss',
     ]);
     assert.equal(toastsOf(d)[0].textContent, TOAST_OK_TEXT);
   }
