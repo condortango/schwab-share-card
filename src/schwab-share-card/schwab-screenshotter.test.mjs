@@ -53,6 +53,7 @@ import {
   CARD_H,
   CARD_THEME,
   CARD_W,
+  CHOOSER_COPY_MARK,
   CHOOSER_HINT_TEXT,
   CHOOSER_MODES,
   CHOOSER_TITLE,
@@ -179,6 +180,17 @@ test('build-output', () => {
   // own text is read by this scan too: a future src= or url( in the module
   // surfaces here rather than in a browser.
   assert.ok(!/<script|src=|@import|url\(/.test(page), 'the page loads nothing');
+
+  // paste.html is hand-written rather than generated, so it cannot go stale the
+  // way the install page can. What it can do is drift out of reach or start
+  // fetching something: the install page has to keep linking it, and the page
+  // itself has to stay as self-contained as the bookmarklet it checks. Its own
+  // script is inline, which is why only a script with a src is refused.
+  const paste = readFileSync(join(dirname(INSTALL_PATH), 'paste.html'), 'utf8');
+  assert.ok(page.includes('href="paste.html"'), 'the install page links the paste check');
+  assert.ok(!/https?:\/\/|<link|<script[^>]+src|@import/.test(paste), 'the paste page fetches nothing');
+  assert.ok(paste.includes("addEventListener('paste'"), 'the paste page listens for a paste');
+
   assert.throws(() => buildInstallPage('javascript:a"b'));
   assert.throws(() => buildInstallPage('https://example.com/'));
 });
@@ -186,6 +198,10 @@ test('build-output', () => {
 // The synthetic twin of the responsive capture: same markup, invented symbol
 // and invented figures, because this tree is exported to a public repository.
 const PARENT_FIXTURE = 'positions-parent-acme-short-call.html';
+// Its equity counterpart, twinned the same way. A stock or ETF row keeps the
+// ticker rather than inventing one, because a bare ticker identifies no
+// account; every figure on it is made up.
+const ZM_FIXTURE = 'positions-parent-zm-equity.html';
 
 test('fixtures', () => {
   const HERE = dirname(fileURLToPath(import.meta.url));
@@ -248,7 +264,18 @@ test('fixtures', () => {
     assert.ok(parent.includes('<span class="sr-only">' + label + '</span>'), PARENT_FIXTURE + ' lost its ' + label + ' label');
   }
 
-  const names = rows.map((row) => row.file).concat('positions.html', PARENT_FIXTURE);
+  // the equity row of the same dialect keeps the two things that stand
+  // between a click and the ticker: a textless drawer caret that is the row's
+  // first link, and a company description sitting under the symbol
+  const zm = read(ZM_FIXTURE);
+  assert.ok(/<tr class="positions-parent-row/.test(zm), ZM_FIXTURE + ' is not a responsive row');
+  assert.ok(!/data-isoption|data-symbol/.test(zm), ZM_FIXTURE + ' must carry no data- attributes');
+  assert.ok(!zm.includes('position-options'), ZM_FIXTURE + ' is an equity row and has no option label');
+  assert.ok(/<a role="button"[^>]*aria-label="Position row/.test(zm), ZM_FIXTURE + ' lost its drawer caret');
+  assert.ok(zm.includes('class="position description-one-line '), ZM_FIXTURE + ' lost its company description');
+  assert.ok(zm.includes('SymbolRouting.aspx?symbol=ZM'), ZM_FIXTURE + ' lost its quote link');
+
+  const names = rows.map((row) => row.file).concat('positions.html', PARENT_FIXTURE, ZM_FIXTURE);
   const gatePath = join(HERE, '..', '..', 'scripts', 'export-public.sh');
   if (existsSync(gatePath)) {
     const listed = /^FORBIDDEN_DATA='([^']*)'/m.exec(readFileSync(gatePath, 'utf8'));
@@ -2086,7 +2113,16 @@ test('chooser', () => {
     assert.ok(sheet.attributes.style.includes('border:1px solid ' + ACCENT), 'the sheet wears the Schwab accent');
     assert.equal(sheet.children[0].textContent, CHOOSER_TITLE);
     const buttons = buttonsOf(backdrop);
-    assert.deepEqual(buttons.map((b) => b.textContent), ['% only', '$ only', 'both', 'Cancel']);
+    assert.deepEqual(
+      buttons.map((b) => b.textContent),
+      [CHOOSER_COPY_MARK + '% only', CHOOSER_COPY_MARK + '$ only', CHOOSER_COPY_MARK + 'both', 'Cancel'],
+      'every mode button says the click copies; Cancel, which copies nothing, does not',
+    );
+    assert.deepEqual(
+      buttons.map((b) => b.attributes['aria-label']),
+      ['Copy % only', 'Copy $ only', 'Copy both', undefined],
+      'the name a screen reader reads says the mode and what the click does with it',
+    );
     assert.deepEqual(buttons.map((b) => b.attributes['data-schwab-shot-mode']), ['pct', 'usd', 'both', 'cancel']);
     assert.deepEqual(
       buttons.map((b) => b.attributes.type),
@@ -2927,6 +2963,65 @@ async function withPoisonedGlobals(d, fn) {
 function runBookmarklet() {
   new Function(decodeBookmarklet(readFileSync(OUTPUT_PATH, 'utf8').trim()))();
 }
+
+// The responsive dialect as Schwab draws a stock or an ETF. The row has no
+// option label to name it by, and the link the equity fallback lands on is
+// not the symbol: the drawer caret opens the row and is a link carrying an
+// icon and no text, so it comes first and says nothing. Behind it the ticker
+// is written twice, once visible and once hidden, with the company name
+// underneath in prose. The card wants the ticker and none of the rest.
+test('zm-equity', async () => {
+  const HERE = dirname(fileURLToPath(import.meta.url));
+  const row = rowFromHtml(readFileSync(join(HERE, 'fixtures', ZM_FIXTURE), 'utf8'));
+
+  assert.equal(findPositionRow(row), row, 'the equity parent row is a position row');
+  assert.deepEqual(readRowIdentity(row), {
+    instrument: 'ZM',
+    isOption: false,
+    osi: null,
+    parentName: null,
+    quantity: 100,
+    side: 'long',
+  });
+
+  // the total is the labeled gain/loss cell; the day change beside it is the
+  // other way up, so reading the wrong cell would flip the card's sign
+  const snapshot = parsePositionRow(row);
+  assert.equal(snapshot.totalPct, -12);
+  assert.equal(snapshot.totalDollars, -600);
+  assert.equal(snapshot.dayPct, 0.92);
+  assert.equal(snapshot.dayDollars, 40);
+  assert.equal(snapshot.quantity, 100);
+  assert.equal(snapshot.side, 'long');
+  assert.ok(!JSON.stringify(snapshot).includes('ZOOM'), 'the company description is not the instrument');
+
+  // the caret is skipped for being textless, and a control link that does
+  // carry a word is skipped for calling itself a button
+  const caret = '<td class="symbolCol"><div class="table-cell collapse-icon">'
+    + '<a role="button" aria-label="activate to expand"><span class="sch sch-caret-up"></span></a></div>'
+    + '<div class="table-cell"><span class="wrappable position symbol">'
+    + '<a href="/SymbolRouting.aspx?symbol=ZORK"><span>ZORK</span></a></span></div></td></tr>';
+  assert.equal(
+    readParentIdentity(rowFromHtml('<tr class="positions-parent-row">' + caret)).instrument,
+    'ZORK',
+    'a textless caret ahead of the symbol is not the instrument',
+  );
+  assert.equal(
+    readParentIdentity(rowFromHtml('<tr class="positions-parent-row">' + caret.replace('><span class="sch', '>Expand<span class="sch'))).instrument,
+    'ZORK',
+    'nor is a caret that spells out what it does',
+  );
+
+  // and the whole flow over the captured row: the ticker reaches the card
+  const d = flowEnv();
+  main(d.doc, d.win);
+  clickRow(d, row);
+  assert.equal(choosersOf(d).length, 1, 'the equity row asks which numbers to show');
+  clickOn(d, choosersOf(d)[0], modeButton(d, 'both'));
+  await new Promise((resolve) => { setTimeout(resolve, 0); });
+  assert.deepEqual(flowTexts(d).slice(0, 4), ['ZM', 'Performance', '-12.00%', '-$600.00']);
+  assert.equal(d.win.writes.length, 1, 'one card reaches the clipboard');
+});
 
 test('no-network-static', () => {
   const stripped = stripModule(readFileSync(MODULE_PATH, 'utf8'));

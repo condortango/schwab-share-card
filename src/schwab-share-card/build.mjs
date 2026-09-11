@@ -151,7 +151,9 @@ export function decodeBookmarklet(url) {
 // why this lives in its own file. encodeURIComponent never emits < > " or &,
 // so the href is safe inside double quotes; the check below keeps it so. The
 // links off this page name the public repo, schwab-share-card, because that
-// is the only tree a reader can reach; this one is not published.
+// is the only tree a reader can reach; this one is not published. The one
+// relative link goes to paste.html, the hand-written page that sits beside
+// this one in docs/ and shows a copied card back.
 export function buildInstallPage(url) {
   if (!url.startsWith('javascript:') || /[<>"&]/.test(url)) {
     throw new Error('expected a percent-encoded javascript: URL');
@@ -174,6 +176,8 @@ export function buildInstallPage(url) {
     '<h2>Use</h2>',
     '<ol><li>Open Schwab Positions.</li><li>Click the bookmarklet.</li><li>Click a position row.</li><li>Pick % only, $ only or both.</li><li>Paste the card anywhere.</li></ol>',
     '<p>Esc cancels. The whole program is the link above; it talks to nothing.</p>',
+    '<p>Not sure the copy landed? <a href="paste.html">Paste it here</a> and that page shows'
+      + ' the image back, without sending it anywhere either.</p>',
     '<p><a href="https://github.com/condortango/schwab-share-card/blob/main/src/schwab-share-card/schwab-screenshotter.mjs">Readable source</a></p>',
     '<p><a href="https://github.com/condortango/schwab-share-card">Project on GitHub</a></p>',
     '',

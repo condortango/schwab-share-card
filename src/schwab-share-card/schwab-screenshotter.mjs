@@ -125,13 +125,25 @@ function withClass(root, want) {
   return out;
 }
 
-// The first link under root as collapsed text, which is how both dialects
-// spell an instrument: the symbol is always a link to its quote page.
+// The first quote link under root as collapsed text, which is how both
+// dialects spell an instrument: the symbol is always a link to its quote
+// page. Two other links can come first. A responsive row opens with the
+// drawer caret that expands it, which is an anchor wrapping an icon and so
+// carries no text at all, and any control Schwab writes as a link says
+// role="button" instead of pointing at a quote. Neither names a position, so
+// both are walked past rather than returned empty.
 function linkTextOf(root) {
   const nodes = descendantsOf(root);
   for (let i = 0; i < nodes.length; i++) {
-    if (String(nodes[i].tagName).toLowerCase() === 'a') {
-      return collapse(textOf(nodes[i]));
+    if (String(nodes[i].tagName).toLowerCase() !== 'a') {
+      continue;
+    }
+    if (attrOf(nodes[i], 'role') === 'button') {
+      continue;
+    }
+    const text = collapse(textOf(nodes[i]));
+    if (text !== '') {
+      return text;
     }
   }
   return '';
@@ -1316,6 +1328,14 @@ export function showToast(doc, text, kind) {
 export const CHOOSER_TITLE = 'Share card';
 export const CHOOSER_MODES = [{ id: 'pct', label: '% only' }, { id: 'usd', label: '$ only' }, { id: 'both', label: 'both' }];
 
+// The clipboard every mode button wears in front of its label. A label says
+// how the numbers are written and nothing about what clicking it does, which
+// left the copy -- the one thing the sheet exists to do -- as the only act on
+// the sheet with no mark of its own. The glyph is written as an escape so the
+// module stays plain ASCII, and the name set beside it on each button says the
+// same thing in words, so the picture never has to be read aloud as one.
+export const CHOOSER_COPY_MARK = '\u{1F4CB} ';
+
 // The lines the card may carry, in the order the sheet offers them, each with
 // the state it starts in. The overall change is on because it is the card this
 // program has always drawn; the other two are off because one names the size
@@ -1481,7 +1501,8 @@ export function showChooser(doc, onPick, snapshot) {
   }
   let firstMode = null;
   for (let i = 0; i < CHOOSER_MODES.length; i++) {
-    const button = chooserButton(doc, CHOOSER_MODES[i].label, SHOT_MODE, CHOOSER_MODES[i].id, CHOOSER_BUTTON_STYLE);
+    const button = chooserButton(doc, CHOOSER_COPY_MARK + CHOOSER_MODES[i].label, SHOT_MODE, CHOOSER_MODES[i].id, CHOOSER_BUTTON_STYLE);
+    button.setAttribute('aria-label', 'Copy ' + CHOOSER_MODES[i].label);
     if (!firstMode) {
       firstMode = button;
     }

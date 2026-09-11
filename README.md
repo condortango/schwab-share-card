@@ -31,7 +31,8 @@ bookmark and type `javascript:` back on the front of it.
 4. A small sheet titled `Share card` asks what to put on the card. The
    switches along the top pick which lines it carries — `Quantity`,
    `Day change` and `Overall change` — and the buttons under them pick how
-   those numbers are written: `% only`, `$ only` or `both`.
+   those numbers are written: `% only`, `$ only` or `both`. Each of those
+   three wears a clipboard, because clicking one writes the card to yours.
 5. Between the switches and the buttons the sheet shows the card itself, drawn
    small. It starts on `% only`; moving the pointer onto another mode, or
    tabbing onto it, redraws it in that mode, and switching a line on or off
@@ -41,6 +42,11 @@ bookmark and type `javascript:` back on the front of it.
 6. Click a mode and the card is copied. Paste it wherever you are posting.
 
 Esc cancels at any stage, and so does clicking off the sheet.
+
+To see what actually landed on your clipboard, open
+<https://condortango.github.io/schwab-share-card/paste.html> and press Ctrl-V
+(Cmd-V on a Mac) there. It draws the pasted image and prints its pixel size — a
+card is 1080 by 1920 — and, like the bookmarklet, it sends the image nowhere.
 
 ## The three modes
 

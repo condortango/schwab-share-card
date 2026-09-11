@@ -1,0 +1,106 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Paste check &middot; schwab-share-card</title>
+<style>:root{color-scheme:light dark}
+body{font:16px/1.5 system-ui,sans-serif;max-width:40em;margin:3em auto;padding:0 1em;color:#111;background:#fff}
+h1{font-size:1.5em}
+.zone{border:2px dashed #00A0DF;border-radius:6px;padding:2em 1em;text-align:center;color:#555}
+#note{color:#555}
+#shot{display:none;max-width:100%;border:1px solid #8884;border-radius:6px}
+#shot.on{display:block}
+@media (prefers-color-scheme:dark){body{color:#eee;background:#111}.zone,#note{color:#aaa}}</style>
+<h1>Paste check</h1>
+<p>Copy a card with the share-card bookmarklet, then press <kbd>Ctrl</kbd>+<kbd>V</kbd>
+(<kbd>Cmd</kbd>+<kbd>V</kbd> on a Mac) anywhere on this page. Whatever image is on your
+clipboard is drawn below, with its pixel size underneath it: a share card is 1080 by 1920,
+so those two numbers are how you know the copy carried the card itself.</p>
+<p>The image never leaves this tab. It is read out of the paste event and handed to an
+image element in your own browser; this page uploads nothing, loads nothing and stores
+nothing.</p>
+<div class="zone">Paste here, or drop an image file on the page.</div>
+<p id="note">Nothing pasted yet.</p>
+<img id="shot" alt="The image read from your clipboard">
+<p><a href="./">Back to the install page</a></p>
+<script>
+(function () {
+  var shot = document.getElementById('shot');
+  var note = document.getElementById('note');
+  var shown = '';
+
+  function say(text) {
+    note.textContent = text;
+  }
+
+  // The blob goes on the element as an object URL rather than as a data URL: a
+  // 1080 by 1920 PNG would cost twice its own size to base64 and then have to
+  // be parsed back. The previous URL is revoked as it is replaced, so a long
+  // session of pastes cannot pile blobs up behind the one image on screen.
+  function show(file) {
+    if (shown) {
+      URL.revokeObjectURL(shown);
+    }
+    shown = URL.createObjectURL(file);
+    shot.src = shown;
+    shot.className = 'on';
+  }
+
+  shot.addEventListener('load', function () {
+    say(shot.naturalWidth + ' x ' + shot.naturalHeight + ' pixels');
+  });
+  shot.addEventListener('error', function () {
+    shot.className = '';
+    say('That image could not be decoded.');
+  });
+
+  // A copied image arrives as an item of kind file, never as text, so the items
+  // are walked for the first image one; a dropped file arrives in files instead,
+  // and both lists are read here so one function serves both events. image/png
+  // is what the bookmarklet writes, but anything the browser calls an image is
+  // shown, because a card that came back as something else is worth seeing.
+  function imageFrom(data) {
+    var items = data ? data.items : null;
+    for (var i = 0; items && i < items.length; i++) {
+      if (items[i].kind === 'file' && items[i].type.indexOf('image/') === 0) {
+        return items[i].getAsFile();
+      }
+    }
+    var files = data ? data.files : null;
+    for (var j = 0; files && j < files.length; j++) {
+      if (files[j].type.indexOf('image/') === 0) {
+        return files[j];
+      }
+    }
+    return null;
+  }
+
+  // The listener sits on the document rather than on a field, so the page needs
+  // no focused element to paste into: the keystroke works wherever the pointer
+  // happens to be. A paste carrying no image is left alone for the browser to
+  // handle normally and only reported, because a stray Ctrl-V is not an error.
+  document.addEventListener('paste', function (event) {
+    var file = imageFrom(event.clipboardData);
+    if (!file) {
+      say('No image on clipboard.');
+      return;
+    }
+    event.preventDefault();
+    show(file);
+  });
+
+  // Dropping a saved PNG answers the same question a paste does, and costs two
+  // handlers: without the dragover one the browser navigates away to the file.
+  document.addEventListener('dragover', function (event) {
+    event.preventDefault();
+  });
+  document.addEventListener('drop', function (event) {
+    event.preventDefault();
+    var file = imageFrom(event.dataTransfer);
+    if (!file) {
+      say('That was not an image file.');
+      return;
+    }
+    show(file);
+  });
+}());
+</script>
