@@ -1051,6 +1051,27 @@ test('buildCard modes answer to the default toggles', () => {
   assert.equal(cardOptions({ showOverallChange: 0 }).showOverallChange, true, 'a stray zero is not an answer');
 });
 
+// The quantity is the row's own signed figure, grouped like the dollars beside
+// it. A short position is the case worth pinning: the comma belongs between
+// digit groups, and counting from the right over a minus sign puts it between
+// the sign and the first digit for every magnitude whose digit count is a
+// multiple of three.
+test('formatQuantity-signed-grouping', () => {
+  assert.equal(formatQuantity(102), '102');
+  assert.equal(formatQuantity(-102), '-102', 'a three-digit short is not -,102');
+  assert.equal(formatQuantity(-1234), '-1,234');
+  assert.equal(formatQuantity(-100000), '-100,000', 'nor is a six-digit one -,100,000');
+  assert.equal(formatQuantity(1337), '1,337');
+  assert.equal(formatQuantity(-1337), '-1,337');
+  assert.equal(formatQuantity(-1), '-1');
+  assert.equal(formatQuantity(-1000), '-1,000');
+  assert.equal(formatQuantity(0), '0');
+  assert.equal(formatQuantity(-12.5), '-12.5', 'a fractional quantity keeps its decimals');
+  assert.equal(formatQuantity(12.5), '12.5');
+  assert.equal(formatQuantity(null), null);
+  assert.equal(formatQuantity(NaN), null);
+});
+
 // One test for the three lines the sheet switches, because what matters about
 // them is the combinations: which line is the headline, what order the rest
 // stand in, and which sets are not a card at all.
@@ -1058,13 +1079,6 @@ test('card-toggles', () => {
   const snapshot = cardSnapshot({ dayPct: 1.24, dayDollars: 2750 });
   const build = (mode, options) => buildCard(snapshot, mode, CARD_NOW, stubMeasure, options);
 
-  // the quantity is the row's own signed figure, grouped like the dollars
-  assert.equal(formatQuantity(1337), '1,337');
-  assert.equal(formatQuantity(-1337), '-1,337');
-  assert.equal(formatQuantity(-1), '-1');
-  assert.equal(formatQuantity(12.5), '12.5');
-  assert.equal(formatQuantity(null), null);
-  assert.equal(formatQuantity(NaN), null);
   const quantity = build('pct', { showQuantity: true });
   assert.deepEqual(
     cardTexts(quantity),

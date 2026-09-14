@@ -386,8 +386,12 @@ export function formatQuantity(value) {
   if (typeof value !== 'number' || !isFinite(value)) {
     return null;
   }
-  const parts = String(value).split('.');
-  return groupThousands(parts[0]) + (parts.length > 1 ? '.' + parts[1] : '');
+  // The magnitude is what gets grouped. A minus left on the front of the digits
+  // is one more character for the count from the right to walk past, which
+  // slides every comma one place over and writes a short of 102 as -,102.
+  const parts = String(Math.abs(value)).split('.');
+  const body = groupThousands(parts[0]) + (parts.length > 1 ? '.' + parts[1] : '');
+  return value < 0 ? '-' + body : body;
 }
 
 // Local time on a 24-hour clock, zero-padded. The Date arrives as an argument
