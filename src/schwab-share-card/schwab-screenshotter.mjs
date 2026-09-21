@@ -75,8 +75,17 @@ export function findPositionRow(start) {
     if (typeof attrOf(el, 'app-position-row') === 'string') {
       return el;
     }
-    const cls = el.className;
-    if (typeof cls === 'string' && (cls.indexOf('position-row') >= 0 || cls.indexOf(PARENT_ROW_CLASS) >= 0)) {
+    const cls = typeof el.className === 'string' ? el.className : '';
+    if (cls.indexOf('position-row') >= 0 || cls.indexOf(PARENT_ROW_CLASS) >= 0) {
+      return el;
+    }
+    // Schwab's holdings chrome is a third dialect and no table row at all: a
+    // flex strip with the symbol link at one end and a next-steps menu at the
+    // other. The strip is the one element wearing the holdings class and the
+    // spread both, which is what stops a click on the symbol at the whole
+    // strip rather than at the inner block that holds the link alone, and
+    // what brings a click on the three-dots menu to that same element.
+    if (cls.indexOf('holdings-items-center') >= 0 && cls.indexOf('sdps-flex-space-between') >= 0) {
       return el;
     }
     el = el.parentElement;
@@ -150,10 +159,13 @@ function linkTextOf(root) {
 }
 
 // The symbol cell's link text, which is the card's instrument line verbatim:
-// ZORK for shares, ACME 01/15/2027 50.00 C for an option leg.
+// ZORK for shares, ACME 01/15/2027 50.00 C for an option leg. The holdings
+// strip has no symbol cell to narrow the search to, so the strip itself is
+// searched; the same walk finds the same link either way, because the only
+// other link a strip carries is the menu, which names itself a button.
 export function readInstrument(row) {
   const cells = withClass(row, 'symbolColumn');
-  return cells.length === 0 ? '' : linkTextOf(cells[0]);
+  return linkTextOf(cells.length === 0 ? row : cells[0]);
 }
 
 // Every other numeric cell in a Schwab row carries a $ or a %, so a bare
@@ -281,16 +293,21 @@ export function readRowIdentity(row) {
   if (isParentRow(row)) {
     return readParentIdentity(row);
   }
-  const isOption = attrOf(row, 'data-isoption') === 'true';
+  // The holdings strip carries none of the data- attributes either, so the
+  // shape of the symbol line answers for option-ness there, exactly as it
+  // does for the responsive dialect. A row with no data-symbol has no OSI
+  // rather than an empty one, which keeps absent and blank apart.
+  const instrument = readInstrument(row);
+  const isOption = attrOf(row, 'data-isoption') === 'true' || OPTION_INSTRUMENT.test(instrument);
   const quantity = readQuantity(row);
   let side = null;
   if (quantity !== null) {
     side = quantity < 0 ? 'short' : 'long';
   }
   return {
-    instrument: readInstrument(row),
+    instrument: instrument,
     isOption: isOption,
-    osi: isOption ? collapse(attrOf(row, 'data-symbol')) : null,
+    osi: isOption ? collapse(attrOf(row, 'data-symbol')) || null : null,
     parentName: attrOf(row, 'data-parent-name') || null,
     quantity: quantity,
     side: side,

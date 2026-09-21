@@ -202,6 +202,10 @@ const PARENT_FIXTURE = 'positions-parent-acme-short-call.html';
 // ticker rather than inventing one, because a bare ticker identifies no
 // account; every figure on it is made up.
 const ZM_FIXTURE = 'positions-parent-zm-equity.html';
+// The holdings dialect, captured from the chrome that draws a single holding
+// as a flex strip rather than as a table row. It carries no figures at all,
+// which is the whole point of keeping it: the parser has to refuse it.
+const HOLDINGS_FIXTURE = 'holdings-flex-acme-call.html';
 
 test('fixtures', () => {
   const HERE = dirname(fileURLToPath(import.meta.url));
@@ -275,7 +279,7 @@ test('fixtures', () => {
   assert.ok(zm.includes('class="position description-one-line '), ZM_FIXTURE + ' lost its company description');
   assert.ok(zm.includes('SymbolRouting.aspx?symbol=ZM'), ZM_FIXTURE + ' lost its quote link');
 
-  const names = rows.map((row) => row.file).concat('positions.html', PARENT_FIXTURE, ZM_FIXTURE);
+  const names = rows.map((row) => row.file).concat('positions.html', PARENT_FIXTURE, ZM_FIXTURE, HOLDINGS_FIXTURE);
   const gatePath = join(HERE, '..', '..', 'scripts', 'export-public.sh');
   if (existsSync(gatePath)) {
     const listed = /^FORBIDDEN_DATA='([^']*)'/m.exec(readFileSync(gatePath, 'utf8'));
@@ -321,12 +325,18 @@ function decodeEntities(text) {
 // lastIndex would be rewound under the caller.
 const FAKE_TAG = '<(\\/?)(th|td|a|span|button)\\b([^>]*)>';
 
-function fakeChildren(inner, parent) {
+// The holdings dialect is built out of the tag the table one uses for layout,
+// so it is modeled with a set of its own rather than by adding div to the set
+// above: a div that counts as an element moves the text out of the responsive
+// cells that currently carry it, and those cells are what the parser reads.
+const FAKE_DIV_TAG = '<(\\/?)(div|a|button)\\b([^>]*)>';
+
+function fakeChildren(inner, parent, tags) {
   let depth = 0;
   let start = 0;
   let openTag = '';
   let name = '';
-  const tagRe = new RegExp(FAKE_TAG, 'g');
+  const tagRe = new RegExp(tags || FAKE_TAG, 'g');
   for (let m = tagRe.exec(inner); m; m = tagRe.exec(inner)) {
     if (m[1] === '/') {
       if (depth === 0) {
@@ -334,7 +344,7 @@ function fakeChildren(inner, parent) {
       }
       depth -= 1;
       if (depth === 0) {
-        const child = fakeEl(name, openTag, inner.slice(start, m.index));
+        const child = fakeEl(name, openTag, inner.slice(start, m.index), tags);
         child.parentElement = parent;
         parent.children.push(child);
       }
@@ -355,7 +365,7 @@ function fakeChildren(inner, parent) {
 // and parentElement is wired so a click can be climbed from. Parsing the
 // captured markup rather than hand-writing rows is what locks the tests to
 // Schwab.
-function fakeEl(tag, openTag, inner) {
+function fakeEl(tag, openTag, inner, tags) {
   const attrs = {};
   const attrRe = /([a-zA-Z0-9_:-]+)="([^"]*)"/g;
   for (let m = attrRe.exec(openTag); m; m = attrRe.exec(openTag)) {
@@ -371,7 +381,7 @@ function fakeEl(tag, openTag, inner) {
       return Object.prototype.hasOwnProperty.call(attrs, name) ? attrs[name] : null;
     },
   };
-  fakeChildren(inner, node);
+  fakeChildren(inner, node, tags);
   if (node.children.length === 0) {
     node.textContent = decodeEntities(inner);
   }
@@ -382,6 +392,15 @@ function rowFromHtml(html) {
   const tr = html.match(/<tr\b([^>]*)>([\s\S]*)<\/tr>/);
   assert.ok(tr, 'the fixture holds no tr');
   return fakeEl('tr', tr[1], tr[2]);
+}
+
+// The holdings strip, whose outermost div is the row. The match is greedy on
+// purpose: it runs from the first div in the capture to the last closing tag,
+// which is that wrapper and not the block inside it.
+function stripFromHtml(html) {
+  const div = html.match(/<div\b([^>]*)>([\s\S]*)<\/div>/);
+  assert.ok(div, 'the fixture holds no div');
+  return fakeEl('div', div[1], div[2], FAKE_DIV_TAG);
 }
 
 test('row-identity', () => {
@@ -544,6 +563,61 @@ test('positions-parent-row', () => {
   assert.equal(isParentRow(legacy), false, 'an attribute row is not a responsive one');
   assert.equal(readLabeledText(legacy, 'Quantity'), null, 'the attribute dialect labels nothing');
   assert.equal(readParentIdentity(row).instrument, readRowIdentity(row).instrument);
+});
+
+test('holdings-flex', () => {
+  const HERE = dirname(fileURLToPath(import.meta.url));
+  const html = readFileSync(join(HERE, 'fixtures', HOLDINGS_FIXTURE), 'utf8');
+
+  // the capture is the anonymized one: an invented ticker, a menu named for
+  // the demo rather than for a live index, and no Angular host attributes,
+  // which change on every build Schwab ships and would date the fixture
+  assert.ok(!/<tr\b/.test(html), HOLDINGS_FIXTURE + ' is a table row after all');
+  assert.ok(!/data-isoption|data-symbol=/.test(html), HOLDINGS_FIXTURE + ' must carry no data- attributes');
+  assert.ok(!/_ngcontent/.test(html), HOLDINGS_FIXTURE + ' kept an unstable host attribute');
+  assert.ok(html.includes('next-steps-demo'), HOLDINGS_FIXTURE + ' lost its demo menu id');
+  assert.ok(/class="symbol-height"/.test(html), HOLDINGS_FIXTURE + ' lost the symbol link');
+  assert.ok(html.includes('ACME 10/16/2026 300.00 C'), HOLDINGS_FIXTURE + ' lost its option line');
+
+  const strip = stripFromHtml(html);
+  const block = rowCells(strip)[0];
+  const link = rowCells(block)[0];
+  const menu = rowCells(rowCells(strip)[1])[0];
+  assert.equal(link.tagName, 'A', 'the symbol block holds the quote link');
+  assert.equal(menu.tagName, 'BUTTON', 'the next-steps column holds the menu button');
+
+  // a click on the symbol resolves to the whole strip and not to the block
+  // around the link, and the three-dots menu answers with that same strip
+  // rather than stealing the click for the chrome it belongs to
+  assert.equal(findPositionRow(strip), strip, 'the holdings strip is a position row');
+  assert.equal(findPositionRow(link), strip, 'the symbol link belongs to its strip');
+  assert.equal(findPositionRow(block), strip, 'the symbol block is not a row of its own');
+  assert.equal(findPositionRow(menu), strip, 'the menu button belongs to its strip');
+
+  // no attribute and no option label survive in this dialect, so the shape of
+  // the symbol line is what says this is an option
+  assert.equal(isParentRow(strip), false, 'the holdings strip is not a responsive row');
+  assert.deepEqual(readRowIdentity(strip), {
+    instrument: 'ACME 10/16/2026 300.00 C',
+    isOption: true,
+    osi: null,
+    parentName: null,
+    quantity: null,
+    side: null,
+  });
+
+  // the strip carries no gain/loss anywhere, so the card is refused rather
+  // than drawn around invented figures
+  assert.equal(findTotalCells(strip), null, 'the strip has a total after all');
+  assert.equal(findDayCells(strip), null, 'the strip has a day change after all');
+  assert.equal(parsePositionRow(strip), null, 'a strip with no figures makes no card');
+
+  // the other two dialects are untouched by the new class test
+  const legacy = rowFromHtml(readFileSync(join(HERE, 'fixtures', 'short-call-acme.html'), 'utf8'));
+  assert.equal(readRowIdentity(legacy).osi, 'ACME 270115C00050000');
+  const shares = rowFromHtml(readFileSync(join(HERE, 'fixtures', 'shares-zork.html'), 'utf8'));
+  assert.equal(readRowIdentity(shares).isOption, false);
+  assert.equal(readRowIdentity(shares).osi, null);
 });
 
 // A table around a row, so the header-aware column lookup has something to

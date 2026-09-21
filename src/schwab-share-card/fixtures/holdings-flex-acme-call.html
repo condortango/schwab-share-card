@@ -1,0 +1,23 @@
+<!-- Anonymized Schwab holdings flex-row dialect (not positions-parent-row).
+     Instrument is a quote/chain link; next-steps is a surface menu button.
+     Fake ticker ACME only — no live account figures. -->
+<div class="holdings-items-center sdps-flex-space-between sdps-p-left_large">
+  <div class="sdps-flex holdings-items-center symbol-height">
+    <a class="symbol-height" href="/app/trade/chains/#/quotedetail/symbol/ACME/optionsymbol/ACME%20%20261016C00300000">
+      ACME 10/16/2026 300.00 C
+    </a>
+  </div>
+  <app-next-steps-column class="sdps-p-left_xx-small">
+    <div class="sdps-text-nowrap">
+      <sdps-button variation="surface" sdps-aria-label="Open Menu" size="x-small" style="display: flex !important;" sdps-id="menu-trigger-next-steps-demo" class="sdps-display-inline-block hydrated">
+        <button id="menu-trigger-next-steps-demo-button" aria-label="Open Menu" class="sdps-button sdps-button--x-small sdps-button--surface sc-sdps-solo-layout" type="button">
+          <sdps-icon color="primary" type="functional" name="three-dots-h" size="medium" class="sc-sdps-solo-layout hydrated" style="line-height: 0;">
+            <svg role="presentation" class="sdps-icon sdps-icon--medium sdps-icon--primary sc-sdps-solo-layout">
+              <use xlink:href="#icon-sch-three-dots-h" class="sc-sdps-solo-layout"></use>
+            </svg>
+          </sdps-icon>
+        </button>
+      </sdps-button>
+    </div>
+  </app-next-steps-column>
+</div>
